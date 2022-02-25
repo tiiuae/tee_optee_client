@@ -24,6 +24,8 @@
 #include "invoke_ta.h"
 #include "local_utils.h"
 
+#include "teec_trace.h"
+
 struct ta_context {
 	pthread_mutex_t init_mutex;
 	bool initiated;
@@ -203,6 +205,8 @@ static CK_RV ping_ta(void)
 	uint32_t ta_version[3] = { 0 };
 	uint32_t status = 0;
 
+	IMSG_FN_IN();
+
 	memset(&op, 0, sizeof(op));
 	op.params[0].tmpref.buffer = &status;
 	op.params[0].tmpref.size = sizeof(status);
@@ -231,6 +235,8 @@ static CK_RV ping_ta(void)
 	DMSG("PKCS11 TA version %"PRIu32".%"PRIu32".%"PRIu32,
 	     ta_version[0], ta_version[1], ta_version[2]);
 
+	IMSG_FN_OUT();
+
 	return CKR_OK;
 }
 
@@ -248,6 +254,8 @@ CK_RV ckteec_invoke_init(void)
 	unsigned long tmpconv = 0;
 	char *endp = NULL;
 	int e = 0;
+
+	IMSG_FN_IN();
 
 	login_type_env = getenv("CKTEEC_LOGIN_TYPE");
 
@@ -323,6 +331,8 @@ out:
 		EMSG("terminating...");
 		exit(EXIT_FAILURE);
 	}
+
+	IMSG_FN_OUT();
 
 	return rv;
 }

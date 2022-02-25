@@ -12,6 +12,8 @@
 #include "pkcs11_processing.h"
 #include "pkcs11_token.h"
 
+#include "teec_trace.h"
+
 static const CK_FUNCTION_LIST libckteec_function_list = {
 	.version = {
 		.major = CK_PKCS11_VERSION_MAJOR,
@@ -97,6 +99,8 @@ CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
 	CK_C_INITIALIZE_ARGS_PTR args = NULL;
 	CK_RV rv = 0;
 
+	IMSG_FN_IN();
+
 	if (pInitArgs) {
 		args = (CK_C_INITIALIZE_ARGS_PTR)pInitArgs;
 
@@ -112,6 +116,8 @@ CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_NEED_TO_CREATE_THREADS, CKR_OK,
 		     CKR_MUTEX_BAD);
+
+	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -137,6 +143,8 @@ CK_RV C_GetInfo(CK_INFO_PTR pInfo)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
+	IMSG_FN_IN();
+
 	if (lib_initiated())
 		rv = ck_get_info(pInfo);
 
@@ -144,17 +152,22 @@ CK_RV C_GetInfo(CK_INFO_PTR pInfo)
 		     CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_OK);
 
+	IMSG_FN_OUT();
+
 	return rv;
 }
 
 CK_RV C_GetFunctionList(CK_FUNCTION_LIST_PTR_PTR ppFunctionList)
 {
+	IMSG_FN_IN();
+
 	if (!ppFunctionList)
 		return CKR_ARGUMENTS_BAD;
 
 	/* Discard the const attribute when exporting the list address */
 	*ppFunctionList = (void *)&libckteec_function_list;
 
+	IMSG_FN_OUT();
 	return CKR_OK;
 }
 
@@ -163,6 +176,8 @@ CK_RV C_GetSlotList(CK_BBOOL tokenPresent,
 		    CK_ULONG_PTR pulCount)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
+
+DBG_ABORT(); /* Not ported */
 
 	if (lib_initiated())
 		rv = ck_slot_get_list(tokenPresent, pSlotList, pulCount);
@@ -178,6 +193,8 @@ CK_RV C_GetSlotInfo(CK_SLOT_ID slotID,
 		    CK_SLOT_INFO_PTR pInfo)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
+
+DBG_ABORT(); /* Not ported */
 
 	if (lib_initiated())
 		rv = ck_slot_get_info(slotID, pInfo);
