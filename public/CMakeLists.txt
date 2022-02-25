@@ -13,6 +13,8 @@ add_library(${PROJECT_NAME} INTERFACE)
 ################################################################################
 # Public and private header and library dependencies
 ################################################################################
+target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
 target_include_directories(teec PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ################################################################################
