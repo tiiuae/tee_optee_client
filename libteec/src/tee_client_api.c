@@ -46,7 +46,12 @@
 #endif
 #include <linux/tee.h>
 
+#define UNUSED       __attribute__((__unused__))
+
 #include "teec_benchmark.h"
+
+#include "sel4_serializer.h"
+#include "sel4_req.h"
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
@@ -86,6 +91,7 @@ static void *teec_paged_aligned_alloc(size_t sz)
 	return NULL;
 }
 
+#if 0
 static int teec_open_dev(const char *devname, const char *capabilities,
 			 uint32_t *gen_caps)
 {
@@ -125,6 +131,7 @@ err:
 	close(fd);
 	return -1;
 }
+#endif
 
 static int teec_shm_alloc(int fd, size_t size, int *id)
 {
@@ -157,8 +164,10 @@ static int teec_shm_register(int fd, void *buf, size_t size, int *id)
 	return shm_fd;
 }
 
+#if 0
 TEEC_Result TEEC_InitializeContext(const char *name, TEEC_Context *ctx)
 {
+DBG_ABORT();
 	char devname[PATH_MAX] = { 0 };
 	int fd = 0;
 	size_t n = 0;
@@ -181,14 +190,26 @@ TEEC_Result TEEC_InitializeContext(const char *name, TEEC_Context *ctx)
 
 	return TEEC_ERROR_ITEM_NOT_FOUND;
 }
+#endif
+TEEC_Result TEEC_InitializeContext(const char *name UNUSED, TEEC_Context *ctx)
+{
+	if (!ctx)
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	ctx->fd = CTX_TA_FD;
+
+	return TEEC_SUCCESS;
+}
 
 void TEEC_FinalizeContext(TEEC_Context *ctx)
 {
+DBG_ABORT();
 	if (ctx)
 		close(ctx->fd);
 }
 
 
+#if 0
 static TEEC_Result teec_pre_process_tmpref(TEEC_Context *ctx,
 			uint32_t param_type, TEEC_TempMemoryReference *tmpref,
 			struct tee_ioctl_param *param,
@@ -524,6 +545,7 @@ static TEEC_Result ioctl_errno_to_res(int err)
 		return TEEC_ERROR_GENERIC;
 	}
 }
+#endif
 
 static void uuid_to_octets(uint8_t d[TEE_IOCTL_UUID_LEN], const TEEC_UUID *s)
 {
@@ -591,6 +613,7 @@ static void setup_client_data(struct tee_ioctl_open_session_arg *arg,
 	}
 }
 
+#if 0
 TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 			const TEEC_UUID *destination,
 			uint32_t connection_method, const void *connection_data,
@@ -660,9 +683,99 @@ out:
 		*ret_origin = eorig;
 	return res;
 }
+#endif
+
+TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
+			const TEEC_UUID *destination,
+			uint32_t connection_method, const void *connection_data,
+			TEEC_Operation *operation, uint32_t *ret_origin)
+{
+	struct tee_ioctl_open_session_arg *arg = NULL;
+	TEEC_Result res = TEEC_ERROR_GENERIC;
+	uint32_t eorig = 0;
+	const size_t arg_size =
+		sizeof(struct tee_ioctl_open_session_arg) +
+		TEEC_CONFIG_PAYLOAD_REF_COUNT * sizeof(struct tee_ioctl_param);
+	union {
+		struct tee_ioctl_open_session_arg arg;
+		uint8_t data[arg_size];
+	} buf;
+
+	struct serialized_param *param = NULL;
+	uint32_t param_len = 0;
+	int32_t tee_err = 0;
+
+	IMSG_FN_IN();
+
+	memset(&buf, 0, sizeof(buf));
+
+	if (!ctx || !session) {
+		eorig = TEEC_ORIGIN_API;
+		res = TEEC_ERROR_BAD_PARAMETERS;
+		goto out;
+	}
+
+	arg = &buf.arg;
+	arg->num_params = TEEC_CONFIG_PAYLOAD_REF_COUNT;
+
+	uuid_to_octets(arg->uuid, destination);
+
+	setup_client_data(arg, connection_method, connection_data);
+
+	printf("arg->uuid\n");
+	hexdump(arg->uuid, TEE_IOCTL_UUID_LEN);
+	printf("arg->clnt_uuid\n");
+	hexdump(arg->clnt_uuid, TEE_IOCTL_UUID_LEN);
+
+	printf("arg->clnt_login: %d\n", arg->clnt_login);
+	printf("arg->cancel_id:  %d\n", arg->cancel_id);
+	printf("arg->session:    %d\n", arg->session);
+
+	res = sel4_serialize_params(operation, &param, &param_len);
+	if (res) {
+		EMSG("error: sel4_serialize_params: %d", res);
+		eorig = TEEC_ORIGIN_API;
+		res = TEEC_ERROR_GENERIC;
+		goto out;
+	}
+
+	res = sel4_optee_open_session((char *)param, param_len, &tee_err);
+	if (res) {
+		EMSG("error: sel4_optee_open_session: %d / %d", res, tee_err);
+		if (tee_err)
+			eorig = TEEC_ORIGIN_TEE;
+		else
+			eorig = TEEC_ORIGIN_COMMS;
+		res = TEEC_ERROR_GENERIC;
+		goto out;
+	}
+
+	res = sel4_deserialize_params(operation, param, param_len);
+	if (res) {
+		EMSG("error: sel4_deserialize_params: %d", res);
+		eorig = TEEC_ORIGIN_COMMS;
+		goto out;
+	}
+
+	eorig = TEEC_ORIGIN_TRUSTED_APP;
+
+	session->ctx = ctx;
+	session->session_id = TA_SESSION_ID;
+
+out:
+	if (ret_origin)
+		*ret_origin = eorig;
+
+	free(param);
+
+	IMSG_FN_OUT();
+
+	return res;
+}
 
 void TEEC_CloseSession(TEEC_Session *session)
 {
+DBG_ABORT();
 	struct tee_ioctl_close_session_arg arg;
 
 	memset(&arg, 0, sizeof(arg));
@@ -675,6 +788,7 @@ void TEEC_CloseSession(TEEC_Session *session)
 		EMSG("Failed to close session 0x%x", session->session_id);
 }
 
+#if 0
 TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 			TEEC_Operation *operation, uint32_t *error_origin)
 {
@@ -746,6 +860,74 @@ out_free_temp_refs:
 out:
 	if (error_origin)
 		*error_origin = eorig;
+	return res;
+}
+#endif
+
+TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
+			TEEC_Operation *operation, uint32_t *error_origin)
+{
+	TEEC_Result res = TEEC_ERROR_GENERIC;
+	uint32_t eorig = 0;
+
+	struct serialized_param *param = NULL;
+	uint32_t param_len = 0;
+	int32_t tee_err = 0;
+
+	if (!session) {
+		eorig = TEEC_ORIGIN_API;
+		res = TEEC_ERROR_BAD_PARAMETERS;
+		goto out;
+	}
+
+	IMSG_FN_IN();
+
+	printf("session->session_id: %d\n", session->session_id);
+	printf("cmd_id: %d\n", cmd_id);
+
+	if (operation) {
+		teec_mutex_lock(&teec_mutex);
+		operation->session = session;
+		teec_mutex_unlock(&teec_mutex);
+	}
+
+	res = sel4_serialize_params(operation, &param, &param_len);
+	if (res) {
+		EMSG("error: sel4_serialize_params: %d", res);
+		eorig = TEEC_ORIGIN_API;
+		res = TEEC_ERROR_GENERIC;
+		goto out;
+	}
+
+	res = sel4_optee_invoke_cmd(cmd_id, (char *)param, param_len, &tee_err);
+	if (res) {
+		EMSG("error: sel4_optee_invoke_cmd: %d / %d", res, tee_err);
+		if (tee_err)
+			eorig = TEEC_ORIGIN_TEE;
+		else
+			eorig = TEEC_ORIGIN_COMMS;
+		res = TEEC_ERROR_GENERIC;
+		goto out;
+	}
+
+	res = sel4_deserialize_params(operation, param, param_len);
+	if (res) {
+		EMSG("error: sel4_deserialize_params: %d", res);
+		eorig = TEEC_ORIGIN_COMMS;
+		res = TEEC_ERROR_GENERIC;
+		goto out;
+	}
+
+	eorig = TEEC_ORIGIN_TRUSTED_APP;
+
+out:
+	if (error_origin)
+		*error_origin = eorig;
+
+	free(param);
+
+	IMSG_FN_OUT();
+
 	return res;
 }
 
