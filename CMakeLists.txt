@@ -33,6 +33,7 @@ if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
+add_subdirectory (libsel4serialize)
 add_subdirectory (libteec)
 add_subdirectory (tee-supplicant)
 add_subdirectory (public)
