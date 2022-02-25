@@ -34,6 +34,7 @@ extern "C" {
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifndef BINARY_PREFIX
 #error "BINARY_PREFIX not defined"
@@ -139,6 +140,49 @@ void _dprintf(const char *function, int line, int level, const char *prefix,
  * @return void
  */
 void dump_buffer(const char *bname, const uint8_t *buffer, size_t blen);
+
+#define IMSG_FN_IN()    IMSG("->")
+#define IMSG_FN_OUT()   IMSG("<-")
+
+static inline void dbg_abort_proc(const char *fn, uint32_t line)
+{
+	EMSG("ABORT: %s: %d", fn, line);
+	volatile int i = 1;
+	while(i) __atomic_thread_fence(__ATOMIC_RELAXED);
+}
+
+#define DBG_ABORT() dbg_abort_proc(__FUNCTION__, __LINE__)
+
+inline static void hexdump(void* data, size_t size)
+{
+    char ascii[17] = { 0 };
+
+    for (unsigned int i = 0; i < size; ++i)
+    {
+        printf("%02X ", ((unsigned char*)data)[i]);
+        if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~')
+            ascii[i % 16] = ((unsigned char*)data)[i];
+        else
+            ascii[i % 16] = '.';
+
+        if ((i+1) % 8 != 0 &&
+            i+1 != size)
+            continue;
+
+        printf(" ");
+        if ((i+1) % 16 == 0)
+            printf("|  %s \n", ascii);
+        else if (i+1 == size)
+        {
+            ascii[(i+1) % 16] = '\0';
+            if ((i+1) % 16 <= 8)
+                printf(" ");
+            for (int j = (i+1) % 16; j < 16; ++j)
+                printf("   ");
+            printf("|  %s \n", ascii);
+        }
+    }
+}
 
 #ifdef __cplusplus
 }
