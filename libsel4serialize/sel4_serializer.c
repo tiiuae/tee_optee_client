@@ -21,6 +21,8 @@
 
 #include <linux/tee.h>
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 #include "sel4_serializer.h"
 
 /* From OPTEE OS */
@@ -70,7 +72,7 @@ static TEEC_Result allocate_serialize_buf(TEEC_Operation *operation,
         }
     }
 
-    buf = malloc(len);
+    buf = calloc(1, len);
     if (!buf) {
         EMSG("out of memory");
         return TEEC_ERROR_OUT_OF_MEMORY;
@@ -78,10 +80,6 @@ static TEEC_Result allocate_serialize_buf(TEEC_Operation *operation,
 
     *param = buf;
     *param_len = len;
-
-    IMSG("param_len: %ld", len);
-
-    memset(buf, 0x0, len);
 
     return TEEC_SUCCESS;
 }
@@ -106,9 +104,15 @@ static void serialize_tmpref(TEEC_TempMemoryReference *tmpref,
     }
 
     param->val_len = tmpref->size;
-    memcpy(param->value, tmpref->buffer, param->val_len);
 
     IMSG("TEEC_MEMREF_TEMP [%d] len: %d", param_type, param->val_len);
+
+    if (!tmpref->buffer) {
+        IMSG("no buffer");
+        return;
+    }
+
+    memcpy(param->value, tmpref->buffer, param->val_len);
 
     hexdump(param->value, param->val_len);
 }
@@ -119,23 +123,35 @@ static TEEC_Result serialize_memref_whole(
 {
     const uint32_t inout = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
     uint32_t flags = memref->parent->flags & inout;
-    uint32_t param_type = 0;
 
-    if (flags & (TEEC_MEM_INPUT | TEEC_MEM_OUTPUT))
-        param_type = TEEC_MEMREF_TEMP_INOUT;
+    if (flags == inout)
+        param->param_type = TEEC_MEMREF_TEMP_INOUT;
     else if (flags & TEEC_MEM_INPUT)
-        param_type = TEEC_MEMREF_TEMP_INPUT;
+        param->param_type = TEEC_MEMREF_TEMP_INPUT;
     else if (flags & TEEC_MEM_OUTPUT)
-        param_type = TEEC_MEMREF_TEMP_OUTPUT;
+        param->param_type = TEEC_MEMREF_TEMP_OUTPUT;
     else {
         EMSG("Unknown flags: 0x%x", flags);
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 
+    if (!memref->parent) {
+        EMSG("invalid parent");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+
     param->val_len = memref->parent->size;
+
+    IMSG("TEEC_MEMREF_WHOLE [%d] len: %d, f: 0x%x", param->param_type,
+        param->val_len, memref->parent->flags);
+
+    if (!memref->parent->buffer) {
+        IMSG("no buffer");
+        return TEEC_SUCCESS;
+    }
+
     memcpy(param->value, memref->parent->buffer, param->val_len);
 
-    IMSG("TEEC_MEMREF_WHOLE [%d] len: %d", param_type, param->val_len);
     hexdump(param->value, param->val_len);
 
     return TEEC_SUCCESS;
@@ -160,17 +176,15 @@ TEEC_Result sel4_serialize_params(TEEC_Operation *operation,
         goto out;
     }
 
-    /* Create empty operation with NONE params to be sent to TEE*/
+    /* Create empty operation with TEEC_NONE params to be sent to TEE*/
     if (!operation) {
         IMSG("No params");
-        op = malloc(sizeof(TEEC_Operation));
+        op = calloc(1, sizeof(TEEC_Operation));
         if (!op) {
             EMSG("out of memory");
             err = TEEC_ERROR_OUT_OF_MEMORY;
             goto out;
         }
-        /* paramTypes: TEEC_NONE */
-        memset(op, 0x0, sizeof(TEEC_Operation));
     }
 
     err = allocate_serialize_buf(op, &buf, &len);
@@ -214,6 +228,7 @@ TEEC_Result sel4_serialize_params(TEEC_Operation *operation,
             DBG_ABORT();
             break;
         default:
+            EMSG("Unknown param type: %d", param_type);
             err = TEEC_ERROR_BAD_PARAMETERS;
             goto out;
         }
@@ -243,23 +258,36 @@ out:
 
 static TEEC_Result deserialize_tmpref(uint32_t param_type,
                                       TEEC_Parameter *teec_param,
-                                      struct serialized_param *param
-)
+                                      struct serialized_param *param)
 {
+    size_t tmpref_size = teec_param->tmpref.size;
+
     if (param_type != param->param_type) {
         EMSG("Invalid param type: %d / %d", param_type, param->param_type);
         return TEEC_ERROR_BAD_FORMAT;
     }
 
-    if (param->val_len > teec_param->tmpref.size) {
-        EMSG("Invalid param size: %d / %ld", param->val_len, teec_param->tmpref.size);
-        return TEEC_ERROR_BAD_FORMAT;
+    IMSG("TEEC_MEMREF_TEMP [%d] len: %ld / %d", param_type,
+        teec_param->tmpref.size, param->val_len);
+
+    /* If provided buffer was too short TA might return required
+     * buffer size back.
+     */
+    teec_param->tmpref.size = param->val_len;
+
+    if (!teec_param->tmpref.buffer) {
+        IMSG("memref NULL buffer");
+        return TEEC_SUCCESS;
     }
 
-    teec_param->tmpref.size = param->val_len;
-    memcpy(teec_param->tmpref.buffer, param->value, param->val_len);
+    memcpy(teec_param->tmpref.buffer,
+           param->value,
+           MIN(tmpref_size, param->val_len));
 
-    IMSG("TEEC_MEMREF_TEMP [%d] len: %d", param_type, param->val_len);
+    if (param->val_len > tmpref_size) {
+        EMSG("partial copy: %ld / %d", tmpref_size, param->val_len);
+    }
+
     hexdump(param->value, param->val_len);
 
     return TEEC_SUCCESS;
@@ -267,9 +295,13 @@ static TEEC_Result deserialize_tmpref(uint32_t param_type,
 
 static TEEC_Result deserialize_memref(uint32_t param_type,
                                       TEEC_Parameter *teec_param,
-                                      struct serialized_param *param
-)
+                                      struct serialized_param *param)
 {
+    if (!teec_param->memref.parent) {
+        EMSG("invalid memref");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+
     /* process only output params */
     if (!(teec_param->memref.parent->flags & TEEC_MEM_OUTPUT)) {
         IMSG("TEEC_MEMREF_WHOLE INPUT (NOP)");
@@ -282,17 +314,28 @@ static TEEC_Result deserialize_memref(uint32_t param_type,
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 
-    if (param->val_len > teec_param->memref.parent->size) {
-        EMSG("Buffer size mismatch: %d / %ld", param->val_len,
-            teec_param->memref.parent->size);
-        return TEEC_ERROR_BAD_FORMAT;
+    IMSG("TEEC_MEMREF_WHOLE [%d] len: %ld / %d", param_type,
+        teec_param->memref.parent->size, param->val_len);
+
+    /* If provided buffer was too short TA might return required
+     * buffer size back.
+     */
+    teec_param->memref.size = param->val_len;
+
+    if (!teec_param->memref.parent->buffer) {
+        IMSG("memref NULL buffer");
+        return TEEC_SUCCESS;
     }
 
-    teec_param->memref.parent->size = param->val_len;
     memcpy(teec_param->memref.parent->buffer,
-            param->value, param->val_len);
+           param->value,
+           MIN(teec_param->memref.parent->size, teec_param->memref.size));
 
-    IMSG("TEEC_MEMREF_WHOLE [%d] len: %d", param_type, param->val_len);
+    if (teec_param->memref.size > teec_param->memref.parent->size) {
+        EMSG("partial copy: %ld / %ld", teec_param->memref.parent->size,
+            teec_param->memref.size);
+    }
+
     hexdump(param->value, param->val_len);
 
     return TEEC_SUCCESS;

@@ -701,9 +701,10 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 		uint8_t data[arg_size];
 	} buf;
 
-	struct serialized_param *param = NULL;
-	uint32_t param_len = 0;
+	struct serialized_param *param_in_out = NULL;
+	uint32_t in_out_len = 0;
 	int32_t tee_err = 0;
+	uint32_t ta_err = 0;
 
 	IMSG_FN_IN();
 
@@ -731,7 +732,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 	printf("arg->cancel_id:  %d\n", arg->cancel_id);
 	printf("arg->session:    %d\n", arg->session);
 
-	res = sel4_serialize_params(operation, &param, &param_len);
+	res = sel4_serialize_params(operation, &param_in_out, &in_out_len);
 	if (res) {
 		EMSG("error: sel4_serialize_params: %d", res);
 		eorig = TEEC_ORIGIN_API;
@@ -739,21 +740,32 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 		goto out;
 	}
 
-	res = sel4_optee_open_session((char *)param, param_len, &tee_err);
+	res = sel4_optee_open_session((char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
 	if (res) {
-		EMSG("error: sel4_optee_open_session: %d / %d", res, tee_err);
-		if (tee_err)
-			eorig = TEEC_ORIGIN_TEE;
-		else
-			eorig = TEEC_ORIGIN_COMMS;
+		EMSG("error: sel4_optee_open_session: %d", res);
+		eorig = TEEC_ORIGIN_COMMS;
 		res = TEEC_ERROR_GENERIC;
 		goto out;
 	}
 
-	res = sel4_deserialize_params(operation, param, param_len);
+	if (tee_err != TEE_OK) {
+		EMSG("TEE error: 0x%x", tee_err);
+		eorig = TEEC_ORIGIN_TEE;
+		res = tee_err;
+		goto out;
+	}
+
+	res = sel4_deserialize_params(operation, param_in_out, in_out_len);
 	if (res) {
 		EMSG("error: sel4_deserialize_params: %d", res);
 		eorig = TEEC_ORIGIN_COMMS;
+		goto out;
+	}
+
+	if (ta_err) {
+		EMSG("TA error: 0x%x", ta_err);
+		eorig = TEEC_ORIGIN_TRUSTED_APP;
+		res = ta_err;
 		goto out;
 	}
 
@@ -762,11 +774,13 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 	session->ctx = ctx;
 	session->session_id = TA_SESSION_ID;
 
+	res = ta_err;
+
 out:
 	if (ret_origin)
 		*ret_origin = eorig;
 
-	free(param);
+	free(param_in_out);
 
 	IMSG_FN_OUT();
 
@@ -870,9 +884,10 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 	TEEC_Result res = TEEC_ERROR_GENERIC;
 	uint32_t eorig = 0;
 
-	struct serialized_param *param = NULL;
-	uint32_t param_len = 0;
+	struct serialized_param *param_in_out = NULL;
+	uint32_t in_out_len = 0;
 	int32_t tee_err = 0;
+	uint32_t ta_err = 0;
 
 	if (!session) {
 		eorig = TEEC_ORIGIN_API;
@@ -891,7 +906,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 		teec_mutex_unlock(&teec_mutex);
 	}
 
-	res = sel4_serialize_params(operation, &param, &param_len);
+	res = sel4_serialize_params(operation, &param_in_out, &in_out_len);
 	if (res) {
 		EMSG("error: sel4_serialize_params: %d", res);
 		eorig = TEEC_ORIGIN_API;
@@ -899,18 +914,22 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 		goto out;
 	}
 
-	res = sel4_optee_invoke_cmd(cmd_id, (char *)param, param_len, &tee_err);
+	res = sel4_optee_invoke_cmd(cmd_id, (char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
 	if (res) {
-		EMSG("error: sel4_optee_invoke_cmd: %d / %d", res, tee_err);
-		if (tee_err)
-			eorig = TEEC_ORIGIN_TEE;
-		else
-			eorig = TEEC_ORIGIN_COMMS;
+		EMSG("error: sel4_optee_invoke_cmd: %d", res);
+		eorig = TEEC_ORIGIN_COMMS;
 		res = TEEC_ERROR_GENERIC;
 		goto out;
 	}
 
-	res = sel4_deserialize_params(operation, param, param_len);
+	if (tee_err != TEE_OK) {
+		EMSG("TEE error: 0x%x", tee_err);
+		eorig = TEEC_ORIGIN_TEE;
+		res = tee_err;
+		goto out;
+	}
+
+	res = sel4_deserialize_params(operation, param_in_out, in_out_len);
 	if (res) {
 		EMSG("error: sel4_deserialize_params: %d", res);
 		eorig = TEEC_ORIGIN_COMMS;
@@ -920,11 +939,16 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 
 	eorig = TEEC_ORIGIN_TRUSTED_APP;
 
+	if (ta_err) {
+		EMSG("TA error: 0x%x", ta_err);
+		res = ta_err;
+	}
+
 out:
 	if (error_origin)
 		*error_origin = eorig;
 
-	free(param);
+	free(param_in_out);
 
 	IMSG_FN_OUT();
 
