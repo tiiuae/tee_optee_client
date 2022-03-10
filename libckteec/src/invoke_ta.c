@@ -137,8 +137,10 @@ CK_RV ckteec_invoke_ta(unsigned long cmd, TEEC_SharedMemory *ctrl,
 	memset(&op, 0, sizeof(op));
 
 	if (ctrl && !(ctrl->flags & TEEC_MEM_INPUT &&
-		      ctrl->flags & TEEC_MEM_OUTPUT))
+		      ctrl->flags & TEEC_MEM_OUTPUT)) {
+		EMSG("CKR_ARGUMENTS_BAD");
 		return CKR_ARGUMENTS_BAD;
+	}
 
 	if (ctrl) {
 		op.paramTypes |= TEEC_PARAM_TYPES(TEEC_MEMREF_WHOLE, 0, 0, 0);
@@ -167,6 +169,8 @@ CK_RV ckteec_invoke_ta(unsigned long cmd, TEEC_SharedMemory *ctrl,
 	}
 
 	res = TEEC_InvokeCommand(&ta_ctx.session, command, &op, &origin);
+	IMSG("res: 0x%x", res);
+
 	switch (res) {
 	case TEEC_SUCCESS:
 		/* Get PKCS11 TA return value from ctrl buffer */
@@ -182,8 +186,10 @@ CK_RV ckteec_invoke_ta(unsigned long cmd, TEEC_SharedMemory *ctrl,
 		ta_rc = CKR_BUFFER_TOO_SMALL;
 		break;
 	case TEEC_ERROR_OUT_OF_MEMORY:
+		IMSG("TEEC_ERROR_OUT_OF_MEMORY / CKR_DEVICE_MEMORY");
 		return CKR_DEVICE_MEMORY;
 	default:
+		IMSG("CKR_GENERAL_ERROR");
 		return CKR_GENERAL_ERROR;
 	}
 
@@ -193,6 +199,8 @@ CK_RV ckteec_invoke_ta(unsigned long cmd, TEEC_SharedMemory *ctrl,
 		if (is_output_shm(io3))
 			*out3_size = op.params[3].memref.size;
 	}
+
+	IMSG("ta_rc: 0x%x", ta_rc);
 
 	return ta_rc;
 }

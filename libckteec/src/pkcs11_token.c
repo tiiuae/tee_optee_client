@@ -14,6 +14,8 @@
 #include "local_utils.h"
 #include "pkcs11_token.h"
 
+#include "teec_trace.h"
+
 #define PKCS11_LIB_MANUFACTURER		"Linaro"
 #define PKCS11_LIB_DESCRIPTION		"OP-TEE PKCS11 Cryptoki library"
 
@@ -84,6 +86,8 @@ CK_RV ck_slot_get_list(CK_BBOOL present,
 
 	size = client_count * sizeof(*slot_ids);
 
+	IMSG("client_count: %ld", client_count);
+
 	shm = ckteec_alloc_shm(size, CKTEEC_SHM_OUT);
 	if (!shm)
 		return CKR_HOST_MEMORY;
@@ -93,6 +97,8 @@ CK_RV ck_slot_get_list(CK_BBOOL present,
 
 	if (rv == CKR_OK || rv == CKR_BUFFER_TOO_SMALL)
 		*count = size / sizeof(*slot_ids);
+
+	IMSG("rv: %ld, size: %ld, count: %ld", rv, size, *count);
 
 	if (!slots && rv == CKR_BUFFER_TOO_SMALL)
 		rv = CKR_OK;

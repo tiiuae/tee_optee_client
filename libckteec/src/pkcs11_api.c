@@ -177,8 +177,7 @@ CK_RV C_GetSlotList(CK_BBOOL tokenPresent,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-DBG_ABORT(); /* Not ported */
-
+	IMSG_FN_IN();
 	if (lib_initiated())
 		rv = ck_slot_get_list(tokenPresent, pSlotList, pulCount);
 
@@ -186,6 +185,7 @@ DBG_ABORT(); /* Not ported */
 		     CKR_CRYPTOKI_NOT_INITIALIZED, CKR_FUNCTION_FAILED,
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_OK);
 
+	IMSG_FN_OUT();
 	return rv;
 }
 
