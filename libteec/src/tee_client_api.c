@@ -203,9 +203,7 @@ TEEC_Result TEEC_InitializeContext(const char *name UNUSED, TEEC_Context *ctx)
 
 void TEEC_FinalizeContext(TEEC_Context *ctx)
 {
-DBG_ABORT();
-	if (ctx)
-		close(ctx->fd);
+	ctx->fd = -1;
 }
 
 
@@ -787,9 +785,9 @@ out:
 	return res;
 }
 
+#if 0
 void TEEC_CloseSession(TEEC_Session *session)
 {
-DBG_ABORT();
 	struct tee_ioctl_close_session_arg arg;
 
 	memset(&arg, 0, sizeof(arg));
@@ -800,6 +798,12 @@ DBG_ABORT();
 	arg.session = session->session_id;
 	if (ioctl(session->ctx->fd, TEE_IOC_CLOSE_SESSION, &arg))
 		EMSG("Failed to close session 0x%x", session->session_id);
+}
+#endif
+
+void TEEC_CloseSession(TEEC_Session *session UNUSED)
+{
+	/* NOP */
 }
 
 #if 0
@@ -1082,6 +1086,7 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *ctx,
 	return TEEC_SUCCESS;
 }
 
+#if 0
 TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 {
 	int fd = 0;
@@ -1129,7 +1134,31 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 	shm->internal.flags = SHM_FLAG_BUFFER_ALLOCED;
 	return TEEC_SUCCESS;
 }
+#endif
 
+TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
+{
+	if (!ctx || !shm)
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	if (!shm->flags || (shm->flags & ~(TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)))
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	if (shm->size == 0) {
+		shm->alloced_size = 0;
+		shm->buffer = NULL;
+	}
+
+	shm->buffer = calloc(1, shm->size);
+	if (!shm->buffer) {
+		return TEEC_ERROR_OUT_OF_MEMORY;
+	}
+
+	shm->alloced_size = shm->size;
+	return TEEC_SUCCESS;
+}
+
+#if 0
 void TEEC_ReleaseSharedMemory(TEEC_SharedMemory *shm)
 {
 	if (!shm || shm->id == -1)
@@ -1161,4 +1190,16 @@ void TEEC_ReleaseSharedMemory(TEEC_SharedMemory *shm)
 	shm->buffer = NULL;
 	shm->registered_fd = -1;
 	shm->internal.flags = 0;
+}
+#endif
+
+void TEEC_ReleaseSharedMemory(TEEC_SharedMemory *shm)
+{
+	if (!shm)
+		return;
+
+	free(shm->buffer);
+	shm->buffer = NULL;
+	shm->size = 0;
+	shm->alloced_size = 0;
 }
