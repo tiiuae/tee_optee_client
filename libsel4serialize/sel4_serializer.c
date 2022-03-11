@@ -51,7 +51,7 @@ static TEEC_Result allocate_serialize_buf(TEEC_Operation *operation,
         case TEEC_VALUE_INPUT:
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
-            DBG_ABORT();
+            len += sizeof(TEEC_Value);
             break;
         case TEEC_MEMREF_TEMP_INPUT:
         case TEEC_MEMREF_TEMP_OUTPUT:
@@ -85,27 +85,13 @@ static TEEC_Result allocate_serialize_buf(TEEC_Operation *operation,
 }
 
 static void serialize_tmpref(TEEC_TempMemoryReference *tmpref,
-                            uint32_t param_type,
                             struct serialized_param *param)
 {
-    switch (param_type) {
-    case TEEC_MEMREF_TEMP_INPUT:
-        param->param_type = TEE_PARAM_TYPE_MEMREF_INPUT;
-        break;
-    case TEEC_MEMREF_TEMP_OUTPUT:
-        param->param_type = TEE_PARAM_TYPE_MEMREF_OUTPUT;
-        break;
-    /* TEEC_MEMREF_TEMP_INOUT
-     * no other values passed by caller
-     */
-    default:
-        param->param_type = TEE_PARAM_TYPE_MEMREF_INOUT;
-        break;
-    }
+    /* param_type is already set by caller */
 
     param->val_len = tmpref->size;
 
-    IMSG("TEEC_MEMREF_TEMP [%d] len: %d", param_type, param->val_len);
+    IMSG("TEEC_MEMREF_TEMP [%d] len: %d", param->param_type, param->val_len);
 
     if (!tmpref->buffer) {
         IMSG("no buffer");
@@ -117,13 +103,14 @@ static void serialize_tmpref(TEEC_TempMemoryReference *tmpref,
     hexdump(param->value, param->val_len);
 }
 
-static TEEC_Result serialize_memref_whole(
-                                TEEC_RegisteredMemoryReference *memref,
-                                struct serialized_param *param)
+static TEEC_Result
+serialize_memref_whole(TEEC_RegisteredMemoryReference *memref,
+                       struct serialized_param *param)
 {
     const uint32_t inout = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
     uint32_t flags = memref->parent->flags & inout;
 
+    /* replace TEEC_MEMREF_WHOLE with proper TEEC_MEMREF_TEMP */
     if (flags == inout)
         param->param_type = TEEC_MEMREF_TEMP_INOUT;
     else if (flags & TEEC_MEM_INPUT)
@@ -200,21 +187,26 @@ TEEC_Result sel4_serialize_params(TEEC_Operation *operation,
     for (int i = 0; i < TEEC_CONFIG_PAYLOAD_REF_COUNT; i++) {
         param_type = TEEC_PARAM_TYPE_GET(op->paramTypes, i);
 
+        param->param_type = TEEC_PARAM_TYPE_GET(op->paramTypes, i);
+
         switch (param_type) {
         case TEEC_NONE:
             IMSG("TEEC_NONE");
-            param->param_type = TEE_PARAM_TYPE_NONE;
             param->val_len = 0;
             break;
         case TEEC_VALUE_INPUT:
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
-            DBG_ABORT();
+            IMSG("TEEC_VALUE [%d]: a: 0x%x, b: 0x%x", param_type,
+                op->params[i].value.a, op->params[i].value.b);
+
+            param->val_len = sizeof(TEEC_Value);
+            memcpy(param->value, &op->params[i].value, param->val_len);
             break;
         case TEEC_MEMREF_TEMP_INPUT:
         case TEEC_MEMREF_TEMP_OUTPUT:
         case TEEC_MEMREF_TEMP_INOUT:
-            serialize_tmpref(&op->params[i].tmpref, param_type, param);
+            serialize_tmpref(&op->params[i].tmpref, param);
             break;
         case TEEC_MEMREF_WHOLE:
             err = serialize_memref_whole(&op->params[i].memref, param);
@@ -293,8 +285,7 @@ static TEEC_Result deserialize_tmpref(uint32_t param_type,
     return TEEC_SUCCESS;
 }
 
-static TEEC_Result deserialize_memref(uint32_t param_type,
-                                      TEEC_Parameter *teec_param,
+static TEEC_Result deserialize_memref(TEEC_Parameter *teec_param,
                                       struct serialized_param *param)
 {
     if (!teec_param->memref.parent) {
@@ -314,7 +305,7 @@ static TEEC_Result deserialize_memref(uint32_t param_type,
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 
-    IMSG("TEEC_MEMREF_WHOLE [%d] len: %ld / %d", param_type,
+    IMSG("TEEC_MEMREF_WHOLE [%d] len: %ld / %d", param->param_type,
         teec_param->memref.parent->size, param->val_len);
 
     /* If provided buffer was too short TA might return required
@@ -337,6 +328,28 @@ static TEEC_Result deserialize_memref(uint32_t param_type,
     }
 
     hexdump(param->value, param->val_len);
+
+    return TEEC_SUCCESS;
+}
+
+static TEEC_Result deserialize_value(uint32_t param_type,
+                                     TEEC_Parameter *teec_param,
+                                     struct serialized_param *param)
+{
+    if (param_type != param->param_type) {
+        EMSG("Invalid param type: %d / %d", param_type, param->param_type);
+        return TEEC_ERROR_BAD_FORMAT;
+    }
+
+    if (param->val_len != sizeof(TEEC_Value)){
+        EMSG("invalid param len: %d", param->val_len);
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+
+    memcpy(&teec_param->value, param->value, param->val_len);
+
+    IMSG("TEEC_VALUE [%d]: a: 0x%x, b: 0x%x", param_type, teec_param->value.a,
+        teec_param->value.b);
 
     return TEEC_SUCCESS;
 }
@@ -365,7 +378,8 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
     for (int i = 0; i < TEEC_CONFIG_PAYLOAD_REF_COUNT; i++) {
         if ((uintptr_t)param >= buf_end) {
             EMSG("Buffer overflow");
-            return TEEC_ERROR_EXCESS_DATA;
+            err = TEEC_ERROR_EXCESS_DATA;
+            goto out;
         }
 
         param_type = TEEC_PARAM_TYPE_GET(operation->paramTypes, i);
@@ -375,23 +389,29 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
             IMSG("TEEC_NONE");
             break;
         case TEEC_VALUE_INPUT:
+            EMSG("TEEC_VALUE_INPUT (NOP)");
+            break;
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
-            DBG_ABORT();
+            err = deserialize_value(param_type, &operation->params[i], param);
+            if (err) {
+                goto out;
+            }
             break;
         case TEEC_MEMREF_TEMP_INPUT:
+            EMSG("TEEC_MEMREF_TEMP_INPUT (NOP)");
             break;
         case TEEC_MEMREF_TEMP_OUTPUT:
         case TEEC_MEMREF_TEMP_INOUT:
             err = deserialize_tmpref(param_type, &operation->params[i], param);
             if (err) {
-                return err;
+                goto out;
             }
             break;
         case TEEC_MEMREF_WHOLE:
-            err = deserialize_memref(param_type, &operation->params[i], param);
+            err = deserialize_memref(&operation->params[i], param);
             if (err) {
-                return err;
+                goto out;
             }
             break;
         case TEEC_MEMREF_PARTIAL_INPUT:
@@ -400,13 +420,17 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
             DBG_ABORT();
             break;
         default:
-            return TEEC_ERROR_BAD_PARAMETERS;
+            err = TEEC_ERROR_BAD_PARAMETERS;
+            goto out;
         }
 
         /* Move to next parameter */
         param = (struct serialized_param *)(param->value + param->val_len);
     };
 
-    return TEEC_SUCCESS;
+    err = 0;
+out:
+
+    return err;
 }
 #pragma GCC diagnostic pop
