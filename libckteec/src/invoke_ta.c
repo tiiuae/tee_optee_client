@@ -142,6 +142,8 @@ CK_RV ckteec_invoke_ta(unsigned long cmd, TEEC_SharedMemory *ctrl,
 		return CKR_ARGUMENTS_BAD;
 	}
 
+	IMSG("op.paramTypes: 0x%x", op.paramTypes);
+
 	if (ctrl) {
 		op.paramTypes |= TEEC_PARAM_TYPES(TEEC_MEMREF_WHOLE, 0, 0, 0);
 		op.params[0].memref.parent = ctrl;
@@ -309,7 +311,7 @@ CK_RV ckteec_invoke_init(void)
 
 	res = TEEC_InitializeContext(NULL, &ta_ctx.context);
 	if (res != TEEC_SUCCESS) {
-		EMSG("TEEC init context failed\n");
+		EMSG("TEEC init context failed");
 		rv = CKR_DEVICE_ERROR;
 		goto out;
 	}
@@ -317,7 +319,7 @@ CK_RV ckteec_invoke_init(void)
 	res = TEEC_OpenSession(&ta_ctx.context, &ta_ctx.session, &uuid,
 			       login_method, login_data, NULL, &origin);
 	if (res != TEEC_SUCCESS) {
-		EMSG("TEEC open session failed %x from %d\n", res, origin);
+		EMSG("TEEC open session failed %x from %d", res, origin);
 		TEEC_FinalizeContext(&ta_ctx.context);
 		rv = CKR_DEVICE_ERROR;
 		goto out;

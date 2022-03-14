@@ -721,14 +721,14 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 
 	setup_client_data(arg, connection_method, connection_data);
 
-	printf("arg->uuid\n");
+	IMSG("arg->uuid");
 	hexdump(arg->uuid, TEE_IOCTL_UUID_LEN);
-	printf("arg->clnt_uuid\n");
+	IMSG("arg->clnt_uuid");
 	hexdump(arg->clnt_uuid, TEE_IOCTL_UUID_LEN);
 
-	printf("arg->clnt_login: %d\n", arg->clnt_login);
-	printf("arg->cancel_id:  %d\n", arg->cancel_id);
-	printf("arg->session:    %d\n", arg->session);
+	IMSG("arg->clnt_login: %d", arg->clnt_login);
+	IMSG("arg->cancel_id:  %d", arg->cancel_id);
+	IMSG("arg->session:    %d", arg->session);
 
 	res = sel4_serialize_params(operation, &param_in_out, &in_out_len);
 	if (res) {
@@ -901,8 +901,8 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 
 	IMSG_FN_IN();
 
-	printf("session->session_id: %d\n", session->session_id);
-	printf("cmd_id: %d\n", cmd_id);
+	IMSG("session->session_id: %d", session->session_id);
+	IMSG("cmd_id: %d", cmd_id);
 
 	if (operation) {
 		teec_mutex_lock(&teec_mutex);
