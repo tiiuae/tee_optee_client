@@ -702,8 +702,6 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 	int32_t tee_err = 0;
 	uint32_t ta_err = 0;
 
-	IMSG_FN_IN();
-
 	memset(&buf, 0, sizeof(buf));
 
 	if (!ctx || !session) {
@@ -718,11 +716,6 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 	uuid_to_octets(arg->uuid, destination);
 
 	setup_client_data(arg, connection_method, connection_data);
-
-	IMSG("arg->uuid");
-	hexdump(arg->uuid, TEE_IOCTL_UUID_LEN);
-	IMSG("arg->clnt_uuid");
-	hexdump(arg->clnt_uuid, TEE_IOCTL_UUID_LEN);
 
 	IMSG("arg->clnt_login: %d", arg->clnt_login);
 	IMSG("arg->cancel_id:  %d", arg->cancel_id);
@@ -777,8 +770,6 @@ out:
 		*ret_origin = eorig;
 
 	free(param_in_out);
-
-	IMSG_FN_OUT();
 
 	return res;
 }
@@ -929,8 +920,6 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 		goto out;
 	}
 
-	IMSG_FN_IN();
-
 	IMSG("session->session_id: %d", session->session_id);
 	IMSG("cmd_id: %d", cmd_id);
 
@@ -983,8 +972,6 @@ out:
 		*error_origin = eorig;
 
 	free(param_in_out);
-
-	IMSG_FN_OUT();
 
 	return res;
 }
