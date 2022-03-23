@@ -21,6 +21,12 @@
 
 #include <linux/tee.h>
 
+#ifdef SEL4_PRINT_PARAM_MEMREF
+#define HEXDUMP(...) dump_buffer(__VA_ARGS__)
+#else /* SEL4_PRINT_PARAM_MEMREF */
+#define HEXDUMP(...)
+#endif /* SEL4_PRINT_PARAM_MEMREF */
+
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 #include "sel4_serializer.h"
@@ -100,7 +106,7 @@ static void serialize_tmpref(TEEC_TempMemoryReference *tmpref,
 
     memcpy(param->value, tmpref->buffer, param->val_len);
 
-    hexdump(param->value, param->val_len);
+    HEXDUMP("", param->value, param->val_len);
 }
 
 static TEEC_Result
@@ -139,7 +145,7 @@ serialize_memref_whole(TEEC_RegisteredMemoryReference *memref,
 
     memcpy(param->value, memref->parent->buffer, param->val_len);
 
-    hexdump(param->value, param->val_len);
+    HEXDUMP("", param->value, param->val_len);
 
     return TEEC_SUCCESS;
 }
@@ -277,10 +283,10 @@ static TEEC_Result deserialize_tmpref(uint32_t param_type,
            MIN(tmpref_size, param->val_len));
 
     if (param->val_len > tmpref_size) {
-        EMSG("partial copy: %ld / %d", tmpref_size, param->val_len);
+        IMSG("partial copy: %ld / %d", tmpref_size, param->val_len);
     }
 
-    hexdump(param->value, param->val_len);
+    HEXDUMP("", param->value, param->val_len);
 
     return TEEC_SUCCESS;
 }
@@ -323,11 +329,11 @@ static TEEC_Result deserialize_memref(TEEC_Parameter *teec_param,
            MIN(teec_param->memref.parent->size, teec_param->memref.size));
 
     if (teec_param->memref.size > teec_param->memref.parent->size) {
-        EMSG("partial copy: %ld / %ld", teec_param->memref.parent->size,
+        IMSG("partial copy: %ld / %ld", teec_param->memref.parent->size,
             teec_param->memref.size);
     }
 
-    hexdump(param->value, param->val_len);
+    HEXDUMP("", param->value, param->val_len);
 
     return TEEC_SUCCESS;
 }
@@ -371,7 +377,7 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
     }
 
     if (!param_buf) {
-        IMSG("Invalid params");
+        EMSG("Invalid params");
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 
@@ -389,7 +395,7 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
             IMSG("TEEC_NONE");
             break;
         case TEEC_VALUE_INPUT:
-            EMSG("TEEC_VALUE_INPUT (NOP)");
+            IMSG("TEEC_VALUE_INPUT (NOP)");
             break;
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT:
@@ -399,7 +405,7 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
             }
             break;
         case TEEC_MEMREF_TEMP_INPUT:
-            EMSG("TEEC_MEMREF_TEMP_INPUT (NOP)");
+            IMSG("TEEC_MEMREF_TEMP_INPUT (NOP)");
             break;
         case TEEC_MEMREF_TEMP_OUTPUT:
         case TEEC_MEMREF_TEMP_INOUT:

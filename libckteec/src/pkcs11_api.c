@@ -99,7 +99,7 @@ CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
 	CK_C_INITIALIZE_ARGS_PTR args = NULL;
 	CK_RV rv = 0;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (pInitArgs) {
 		args = (CK_C_INITIALIZE_ARGS_PTR)pInitArgs;
@@ -117,14 +117,14 @@ CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
 		     CKR_NEED_TO_CREATE_THREADS, CKR_OK,
 		     CKR_MUTEX_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
 CK_RV C_Finalize(CK_VOID_PTR pReserved)
 {
 	CK_RV rv = 0;
+
+	IMSG_FN_ENTRY();
 
 	/* Reserved must be set to NULL in this version of PKCS#11 */
 	if (pReserved)
@@ -136,8 +136,6 @@ CK_RV C_Finalize(CK_VOID_PTR pReserved)
 		     CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_OK);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -145,7 +143,7 @@ CK_RV C_GetInfo(CK_INFO_PTR pInfo)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_get_info(pInfo);
@@ -154,22 +152,18 @@ CK_RV C_GetInfo(CK_INFO_PTR pInfo)
 		     CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_OK);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
 CK_RV C_GetFunctionList(CK_FUNCTION_LIST_PTR_PTR ppFunctionList)
 {
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (!ppFunctionList)
 		return CKR_ARGUMENTS_BAD;
 
 	/* Discard the const attribute when exporting the list address */
 	*ppFunctionList = (void *)&libckteec_function_list;
-
-	IMSG_FN_OUT();
 	return CKR_OK;
 }
 
@@ -179,7 +173,7 @@ CK_RV C_GetSlotList(CK_BBOOL tokenPresent,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_slot_get_list(tokenPresent, pSlotList, pulCount);
@@ -188,7 +182,6 @@ CK_RV C_GetSlotList(CK_BBOOL tokenPresent,
 		     CKR_CRYPTOKI_NOT_INITIALIZED, CKR_FUNCTION_FAILED,
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_OK);
 
-	IMSG_FN_OUT();
 	return rv;
 }
 
@@ -197,7 +190,7 @@ CK_RV C_GetSlotInfo(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_slot_get_info(slotID, pInfo);
@@ -205,8 +198,6 @@ CK_RV C_GetSlotInfo(CK_SLOT_ID slotID,
 	ASSERT_CK_RV(rv, CKR_ARGUMENTS_BAD, CKR_CRYPTOKI_NOT_INITIALIZED,
 		     CKR_DEVICE_ERROR, CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR,
 		     CKR_HOST_MEMORY, CKR_OK, CKR_SLOT_ID_INVALID);
-
-	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -218,7 +209,7 @@ CK_RV C_InitToken(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_init_token(slotID, pPin, ulPinLen, pLabel);
@@ -231,8 +222,6 @@ CK_RV C_InitToken(CK_SLOT_ID slotID,
 		     CKR_SLOT_ID_INVALID, CKR_TOKEN_NOT_PRESENT,
 		     CKR_TOKEN_NOT_RECOGNIZED, CKR_TOKEN_WRITE_PROTECTED);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -241,7 +230,7 @@ CK_RV C_GetTokenInfo(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_token_get_info(slotID, pInfo);
@@ -252,8 +241,6 @@ CK_RV C_GetTokenInfo(CK_SLOT_ID slotID,
 		     CKR_SLOT_ID_INVALID, CKR_TOKEN_NOT_PRESENT,
 		     CKR_TOKEN_NOT_RECOGNIZED, CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -263,7 +250,7 @@ CK_RV C_GetMechanismList(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_token_mechanism_ids(slotID, pMechanismList, pulCount);
@@ -274,8 +261,6 @@ CK_RV C_GetMechanismList(CK_SLOT_ID slotID,
 		     CKR_OK, CKR_SLOT_ID_INVALID, CKR_TOKEN_NOT_PRESENT,
 		     CKR_TOKEN_NOT_RECOGNIZED, CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -285,7 +270,7 @@ CK_RV C_GetMechanismInfo(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_token_mechanism_info(slotID, type, pInfo);
@@ -295,8 +280,6 @@ CK_RV C_GetMechanismInfo(CK_SLOT_ID slotID,
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_MECHANISM_INVALID,
 		     CKR_OK, CKR_SLOT_ID_INVALID, CKR_TOKEN_NOT_PRESENT,
 		     CKR_TOKEN_NOT_RECOGNIZED, CKR_ARGUMENTS_BAD);
-
-	IMSG_FN_OUT();
 
 	return rv;
 
@@ -311,7 +294,7 @@ CK_RV C_OpenSession(CK_SLOT_ID slotID,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_open_session(slotID, flags, pApplication, Notify,
@@ -325,8 +308,6 @@ CK_RV C_OpenSession(CK_SLOT_ID slotID,
 		     CKR_TOKEN_NOT_PRESENT, CKR_TOKEN_NOT_RECOGNIZED,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -334,7 +315,7 @@ CK_RV C_CloseSession(CK_SESSION_HANDLE hSession)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_close_session(hSession);
@@ -344,8 +325,6 @@ CK_RV C_CloseSession(CK_SESSION_HANDLE hSession)
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_OK,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -353,7 +332,7 @@ CK_RV C_CloseAllSessions(CK_SLOT_ID slotID)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_close_all_sessions(slotID);
@@ -363,8 +342,6 @@ CK_RV C_CloseAllSessions(CK_SLOT_ID slotID)
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_OK,
 		     CKR_SLOT_ID_INVALID, CKR_TOKEN_NOT_PRESENT);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -373,7 +350,7 @@ CK_RV C_GetSessionInfo(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_get_session_info(hSession, pInfo);
@@ -384,8 +361,6 @@ CK_RV C_GetSessionInfo(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -395,7 +370,7 @@ CK_RV C_InitPIN(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_init_pin(hSession, pPin, ulPinLen);
@@ -409,8 +384,6 @@ CK_RV C_InitPIN(CK_SESSION_HANDLE hSession,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_USER_NOT_LOGGED_IN,
 		     CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -422,7 +395,7 @@ CK_RV C_SetPIN(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_set_pin(hSession, pOldPin, ulOldLen, pNewPin, ulNewLen);
@@ -436,8 +409,6 @@ CK_RV C_SetPIN(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_HANDLE_INVALID, CKR_SESSION_READ_ONLY,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_ARGUMENTS_BAD);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -449,7 +420,7 @@ CK_RV C_Login(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_login(hSession, userType, pPin, ulPinLen);
@@ -466,8 +437,6 @@ CK_RV C_Login(CK_SESSION_HANDLE hSession,
 		     CKR_USER_PIN_NOT_INITIALIZED, CKR_USER_TOO_MANY_TYPES,
 		     CKR_USER_TYPE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -475,7 +444,7 @@ CK_RV C_Logout(CK_SESSION_HANDLE hSession)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_logout(hSession);
@@ -485,8 +454,6 @@ CK_RV C_Logout(CK_SESSION_HANDLE hSession)
 		     CKR_GENERAL_ERROR, CKR_HOST_MEMORY, CKR_OK,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
-
-	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -499,7 +466,7 @@ CK_RV C_GetOperationState(CK_SESSION_HANDLE hSession,
 	(void)pOperationState;
 	(void)pulOperationStateLen;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -519,7 +486,7 @@ CK_RV C_SetOperationState(CK_SESSION_HANDLE hSession,
 	(void)hEncryptionKey;
 	(void)hAuthenticationKey;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -534,7 +501,7 @@ CK_RV C_CreateObject(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_create_object(hSession, pTemplate, ulCount, phObject);
@@ -550,8 +517,6 @@ CK_RV C_CreateObject(CK_SESSION_HANDLE hSession,
 		     CKR_TEMPLATE_INCOMPLETE, CKR_TEMPLATE_INCONSISTENT,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -563,7 +528,7 @@ CK_RV C_CopyObject(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_copy_object(hSession, hObject, pTemplate, ulCount,
@@ -579,8 +544,6 @@ CK_RV C_CopyObject(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_READ_ONLY, CKR_TEMPLATE_INCONSISTENT,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -589,7 +552,7 @@ CK_RV C_DestroyObject(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_destroy_object(hSession, hObject);
@@ -601,8 +564,6 @@ CK_RV C_DestroyObject(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_SESSION_READ_ONLY, CKR_TOKEN_WRITE_PROTECTED);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -612,8 +573,7 @@ CK_RV C_GetObjectSize(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_get_object_size(hSession, hObject, pulSize);
@@ -623,8 +583,6 @@ CK_RV C_GetObjectSize(CK_SESSION_HANDLE hSession,
 		     CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_INFORMATION_SENSITIVE, CKR_OBJECT_HANDLE_INVALID,
 		     CKR_OK, CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID);
-
-	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -636,8 +594,7 @@ CK_RV C_GetAttributeValue(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_get_attribute_value(hSession, hObject, pTemplate, ulCount);
@@ -650,8 +607,6 @@ CK_RV C_GetAttributeValue(CK_SESSION_HANDLE hSession,
 		     CKR_OBJECT_HANDLE_INVALID, CKR_OK, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -662,8 +617,7 @@ CK_RV C_SetAttributeValue(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_set_attribute_value(hSession, hObject, pTemplate, ulCount);
@@ -678,8 +632,6 @@ CK_RV C_SetAttributeValue(CK_SESSION_HANDLE hSession,
 		     CKR_TEMPLATE_INCONSISTENT, CKR_TOKEN_WRITE_PROTECTED,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -689,8 +641,7 @@ CK_RV C_FindObjectsInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_find_objects_init(hSession, pTemplate, ulCount);
@@ -701,8 +652,6 @@ CK_RV C_FindObjectsInit(CK_SESSION_HANDLE hSession,
 		     CKR_FUNCTION_FAILED, CKR_GENERAL_ERROR, CKR_HOST_MEMORY,
 		     CKR_OK, CKR_OPERATION_ACTIVE, CKR_PIN_EXPIRED,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID);
-
-	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -715,8 +664,7 @@ CK_RV C_FindObjects(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_find_objects(hSession, phObject,
@@ -728,8 +676,6 @@ CK_RV C_FindObjects(CK_SESSION_HANDLE hSession,
 		     CKR_OK, CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -737,8 +683,7 @@ CK_RV C_FindObjectsFinal(CK_SESSION_HANDLE hSession)
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_find_objects_final(hSession);
@@ -749,8 +694,6 @@ CK_RV C_FindObjectsFinal(CK_SESSION_HANDLE hSession)
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -760,8 +703,7 @@ CK_RV C_EncryptInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_init(hSession, pMechanism, hKey, CK_FALSE);
@@ -777,8 +719,6 @@ CK_RV C_EncryptInit(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -790,8 +730,7 @@ CK_RV C_Encrypt(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_oneshot(hSession, pData, ulDataLen,
@@ -806,8 +745,6 @@ CK_RV C_Encrypt(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -819,8 +756,7 @@ CK_RV C_EncryptUpdate(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_update(hSession, pPart, ulPartLen,
@@ -835,8 +771,6 @@ CK_RV C_EncryptUpdate(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -846,8 +780,7 @@ CK_RV C_EncryptFinal(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_final(hSession, pLastEncryptedPart,
@@ -861,8 +794,6 @@ CK_RV C_EncryptFinal(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -872,8 +803,7 @@ CK_RV C_DecryptInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_init(hSession, pMechanism, hKey, CK_TRUE);
@@ -889,8 +819,6 @@ CK_RV C_DecryptInit(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -902,8 +830,7 @@ CK_RV C_Decrypt(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_oneshot(hSession, pEncryptedData,
@@ -919,8 +846,6 @@ CK_RV C_Decrypt(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -932,8 +857,7 @@ CK_RV C_DecryptUpdate(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_update(hSession, pEncryptedPart,
@@ -949,8 +873,6 @@ CK_RV C_DecryptUpdate(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -960,8 +882,7 @@ CK_RV C_DecryptFinal(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_encdecrypt_final(hSession, pLastPart, pulLastPartLen,
@@ -976,8 +897,6 @@ CK_RV C_DecryptFinal(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -986,8 +905,7 @@ CK_RV C_DigestInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_digest_init(hSession, pMechanism);
@@ -1000,8 +918,6 @@ CK_RV C_DigestInit(CK_SESSION_HANDLE hSession,
 		     CKR_PIN_EXPIRED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1013,8 +929,7 @@ CK_RV C_Digest(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_digest_oneshot(hSession, pData, ulDataLen, pDigest,
@@ -1028,8 +943,6 @@ CK_RV C_Digest(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1039,8 +952,7 @@ CK_RV C_DigestUpdate(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_digest_update(hSession, pPart, ulPartLen);
@@ -1052,8 +964,6 @@ CK_RV C_DigestUpdate(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1062,8 +972,7 @@ CK_RV C_DigestKey(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_digest_key(hSession, hKey);
@@ -1077,8 +986,6 @@ CK_RV C_DigestKey(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1088,8 +995,7 @@ CK_RV C_DigestFinal(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_digest_final(hSession, pDigest, pulDigestLen);
@@ -1102,8 +1008,6 @@ CK_RV C_DigestFinal(CK_SESSION_HANDLE hSession,
 		     CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1113,8 +1017,7 @@ CK_RV C_SignInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_init(hSession, pMechanism, hKey, CK_TRUE);
@@ -1130,8 +1033,6 @@ CK_RV C_SignInit(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1143,8 +1044,7 @@ CK_RV C_Sign(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_oneshot(hSession, pData, ulDataLen,
@@ -1160,8 +1060,6 @@ CK_RV C_Sign(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN,
 		     CKR_FUNCTION_REJECTED);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1171,8 +1069,7 @@ CK_RV C_SignUpdate(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_update(hSession, pPart, ulPartLen, CK_TRUE);
@@ -1184,8 +1081,6 @@ CK_RV C_SignUpdate(CK_SESSION_HANDLE hSession,
 		     CKR_OK, CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1195,8 +1090,7 @@ CK_RV C_SignFinal(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_final(hSession, pSignature, pulSignatureLen,
@@ -1211,8 +1105,6 @@ CK_RV C_SignFinal(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN,
 		     CKR_FUNCTION_REJECTED);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1223,6 +1115,8 @@ CK_RV C_SignRecoverInit(CK_SESSION_HANDLE hSession,
 	(void)hSession;
 	(void)pMechanism;
 	(void)hKey;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1242,6 +1136,8 @@ CK_RV C_SignRecover(CK_SESSION_HANDLE hSession,
 	(void)pSignature;
 	(void)pulSignatureLen;
 
+	IMSG_FN_ENTRY();
+
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -1254,8 +1150,7 @@ CK_RV C_VerifyInit(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_init(hSession, pMechanism, hKey, CK_FALSE);
@@ -1271,8 +1166,6 @@ CK_RV C_VerifyInit(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1284,7 +1177,7 @@ CK_RV C_Verify(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
+	IMSG_FN_ENTRY();
 
 	CK_ULONG out_size = ulSignatureLen;
 
@@ -1302,8 +1195,6 @@ CK_RV C_Verify(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_HANDLE_INVALID, CKR_SIGNATURE_INVALID,
 		     CKR_SIGNATURE_LEN_RANGE);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1313,8 +1204,7 @@ CK_RV C_VerifyUpdate(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_update(hSession, pPart, ulPartLen, CK_FALSE);
@@ -1326,8 +1216,6 @@ CK_RV C_VerifyUpdate(CK_SESSION_HANDLE hSession,
 		     CKR_OK, CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1337,8 +1225,7 @@ CK_RV C_VerifyFinal(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_signverify_final(hSession, pSignature, &ulSignatureLen,
@@ -1352,8 +1239,6 @@ CK_RV C_VerifyFinal(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_HANDLE_INVALID, CKR_SIGNATURE_INVALID,
 		     CKR_SIGNATURE_LEN_RANGE);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1364,6 +1249,8 @@ CK_RV C_VerifyRecoverInit(CK_SESSION_HANDLE hSession,
 	(void)hSession;
 	(void)pMechanism;
 	(void)hKey;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1383,6 +1270,8 @@ CK_RV C_VerifyRecover(CK_SESSION_HANDLE hSession,
 	(void)pData;
 	(void)pulDataLen;
 
+	IMSG_FN_ENTRY();
+
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -1400,6 +1289,8 @@ CK_RV C_DigestEncryptUpdate(CK_SESSION_HANDLE hSession,
 	(void)ulPartLen;
 	(void)pEncryptedPart;
 	(void)pulEncryptedPartLen;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1419,6 +1310,8 @@ CK_RV C_DecryptDigestUpdate(CK_SESSION_HANDLE hSession,
 	(void)pPart;
 	(void)pulPartLen;
 
+	IMSG_FN_ENTRY();
+
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -1436,6 +1329,8 @@ CK_RV C_SignEncryptUpdate(CK_SESSION_HANDLE hSession,
 	(void)ulPartLen;
 	(void)pEncryptedPart;
 	(void)pulEncryptedPartLen;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1455,6 +1350,8 @@ CK_RV C_DecryptVerifyUpdate(CK_SESSION_HANDLE hSession,
 	(void)pPart;
 	(void)pulPartLen;
 
+	IMSG_FN_ENTRY();
+
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -1469,8 +1366,7 @@ CK_RV C_GenerateKey(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_generate_key(hSession, pMechanism, pTemplate, ulCount,
@@ -1488,8 +1384,6 @@ CK_RV C_GenerateKey(CK_SESSION_HANDLE hSession,
 		     CKR_TEMPLATE_INCOMPLETE, CKR_TEMPLATE_INCONSISTENT,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1504,8 +1398,7 @@ CK_RV C_GenerateKeyPair(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_generate_key_pair(hSession, pMechanism,
@@ -1528,8 +1421,6 @@ CK_RV C_GenerateKeyPair(CK_SESSION_HANDLE hSession,
 		     CKR_TEMPLATE_INCONSISTENT, CKR_TOKEN_WRITE_PROTECTED,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1542,8 +1433,7 @@ CK_RV C_WrapKey(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_wrap_key(hSession, pMechanism, hWrappingKey, hKey,
@@ -1563,8 +1453,6 @@ CK_RV C_WrapKey(CK_SESSION_HANDLE hSession,
 		     CKR_WRAPPING_KEY_SIZE_RANGE,
 		     CKR_WRAPPING_KEY_TYPE_INCONSISTENT);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1579,8 +1467,7 @@ CK_RV C_UnwrapKey(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_unwrap_key(hSession, pMechanism, hUnwrappingKey,
@@ -1605,8 +1492,6 @@ CK_RV C_UnwrapKey(CK_SESSION_HANDLE hSession,
 		     CKR_USER_NOT_LOGGED_IN, CKR_WRAPPED_KEY_INVALID,
 		     CKR_WRAPPED_KEY_LEN_RANGE);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1619,8 +1504,7 @@ CK_RV C_DeriveKey(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_derive_key(hSession, pMechanism, hBaseKey, pTemplate,
@@ -1641,8 +1525,6 @@ CK_RV C_DeriveKey(CK_SESSION_HANDLE hSession,
 		     CKR_TOKEN_WRITE_PROTECTED, CKR_USER_NOT_LOGGED_IN,
 		     CKR_DATA_LEN_RANGE);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1652,8 +1534,7 @@ CK_RV C_SeedRandom(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_seed_random(hSession, pSeed, ulSeedLen);
@@ -1666,8 +1547,6 @@ CK_RV C_SeedRandom(CK_SESSION_HANDLE hSession,
 		     CKR_RANDOM_NO_RNG, CKR_SESSION_CLOSED,
 		     CKR_SESSION_HANDLE_INVALID, CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
-
 	return rv;
 }
 
@@ -1677,8 +1556,7 @@ CK_RV C_GenerateRandom(CK_SESSION_HANDLE hSession,
 {
 	CK_RV rv = CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	IMSG_FN_IN();
-
+	IMSG_FN_ENTRY();
 
 	if (lib_initiated())
 		rv = ck_generate_random(hSession, pRandomData, ulRandomLen);
@@ -1691,7 +1569,6 @@ CK_RV C_GenerateRandom(CK_SESSION_HANDLE hSession,
 		     CKR_SESSION_CLOSED, CKR_SESSION_HANDLE_INVALID,
 		     CKR_USER_NOT_LOGGED_IN);
 
-	IMSG_FN_OUT();
 
 	return rv;
 }
@@ -1699,6 +1576,8 @@ CK_RV C_GenerateRandom(CK_SESSION_HANDLE hSession,
 CK_RV C_GetFunctionStatus(CK_SESSION_HANDLE hSession)
 {
 	(void)hSession;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1709,6 +1588,8 @@ CK_RV C_GetFunctionStatus(CK_SESSION_HANDLE hSession)
 CK_RV C_CancelFunction(CK_SESSION_HANDLE hSession)
 {
 	(void)hSession;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1723,6 +1604,8 @@ CK_RV C_WaitForSlotEvent(CK_FLAGS flags,
 	(void)flags;
 	(void)slotID;
 	(void)pReserved;
+
+	IMSG_FN_ENTRY();
 
 	if (!lib_initiated())
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
