@@ -81,6 +81,7 @@ static void teec_mutex_unlock(pthread_mutex_t *mu)
 	pthread_mutex_unlock(mu);
 }
 
+#if 0
 static void *teec_paged_aligned_alloc(size_t sz)
 {
 	void *p = NULL;
@@ -91,7 +92,6 @@ static void *teec_paged_aligned_alloc(size_t sz)
 	return NULL;
 }
 
-#if 0
 static int teec_open_dev(const char *devname, const char *capabilities,
 			 uint32_t *gen_caps)
 {
@@ -131,7 +131,6 @@ err:
 	close(fd);
 	return -1;
 }
-#endif
 
 static int teec_shm_alloc(int fd, size_t size, int *id)
 {
@@ -164,7 +163,6 @@ static int teec_shm_register(int fd, void *buf, size_t size, int *id)
 	return shm_fd;
 }
 
-#if 0
 TEEC_Result TEEC_InitializeContext(const char *name, TEEC_Context *ctx)
 {
 DBG_ABORT();
@@ -803,7 +801,39 @@ void TEEC_CloseSession(TEEC_Session *session)
 
 void TEEC_CloseSession(TEEC_Session *session UNUSED)
 {
-	/* NOP */
+	TEEC_Result res = TEEC_ERROR_GENERIC;
+
+	struct serialized_param *param_in_out = NULL;
+	uint32_t in_out_len = 0;
+	int32_t tee_err = 0;
+	uint32_t ta_err = 0;
+
+	res = sel4_serialize_params(NULL, &param_in_out, &in_out_len);
+	if (res) {
+		EMSG("error: sel4_serialize_params: %d", res);
+		goto out;
+	}
+
+	res = sel4_optee_close_session((char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
+	if (res) {
+		EMSG("error: sel4_optee_close_session: %d", res);
+		goto out;
+	}
+
+	if (tee_err != TEE_OK) {
+		EMSG("TEE error: 0x%x", tee_err);
+		goto out;
+	}
+
+	if (ta_err) {
+		EMSG("TA error: 0x%x", ta_err);
+		goto out;
+	}
+
+	/* Close session does not send params so the won't be anything for deserialize */
+
+out:
+	free(param_in_out);
 }
 
 #if 0
@@ -983,6 +1013,13 @@ void TEEC_RequestCancellation(TEEC_Operation *operation)
 		EMSG("TEE_IOC_CANCEL: %s", strerror(errno));
 }
 
+TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx UNUSED, TEEC_SharedMemory *shm UNUSED)
+{
+	DBG_ABORT();
+	return TEEC_SUCCESS;
+}
+
+#if 0
 TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 {
 	TEEC_Result res = TEEC_SUCCESS;
@@ -1086,7 +1123,6 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *ctx,
 	return TEEC_SUCCESS;
 }
 
-#if 0
 TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 {
 	int fd = 0;
