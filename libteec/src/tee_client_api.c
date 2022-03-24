@@ -976,6 +976,7 @@ out:
 	return res;
 }
 
+#if 0
 void TEEC_RequestCancellation(TEEC_Operation *operation)
 {
 	TEEC_Session *session = NULL;
@@ -999,11 +1000,11 @@ void TEEC_RequestCancellation(TEEC_Operation *operation)
 	if (ioctl(session->ctx->fd, TEE_IOC_CANCEL, &arg))
 		EMSG("TEE_IOC_CANCEL: %s", strerror(errno));
 }
+#endif
 
-TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx UNUSED, TEEC_SharedMemory *shm UNUSED)
+void TEEC_RequestCancellation(TEEC_Operation *operation UNUSED)
 {
-	DBG_ABORT();
-	return TEEC_SUCCESS;
+	return;
 }
 
 #if 0
@@ -1081,7 +1082,28 @@ out:
 	shm->alloced_size = s;
 	return TEEC_SUCCESS;
 }
+#endif
 
+TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
+{
+	if (!ctx || !shm)
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	if (!shm->flags || (shm->flags & ~(TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)))
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	if (!shm->buffer)
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	shm->alloced_size = shm->size;
+
+	/* prevent freeing buffer in TEEC_ReleaseSharedMemory */
+	shm->internal.flags = 0;
+
+	return TEEC_SUCCESS;
+}
+
+#if 0
 TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *ctx,
 						    TEEC_SharedMemory *shm,
 						    int fd)
@@ -1167,17 +1189,17 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 	if (!shm->flags || (shm->flags & ~(TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)))
 		return TEEC_ERROR_BAD_PARAMETERS;
 
-	if (shm->size == 0) {
-		shm->alloced_size = 0;
-		shm->buffer = NULL;
-	}
-
+	/* calloc returns allocated pointer even if shm->size == 0 */
 	shm->buffer = calloc(1, shm->size);
 	if (!shm->buffer) {
 		return TEEC_ERROR_OUT_OF_MEMORY;
 	}
 
 	shm->alloced_size = shm->size;
+
+	/* allow freeing buffer in TEEC_ReleaseSharedMemory */
+	shm->internal.flags = SHM_FLAG_BUFFER_ALLOCED;
+
 	return TEEC_SUCCESS;
 }
 
@@ -1221,8 +1243,13 @@ void TEEC_ReleaseSharedMemory(TEEC_SharedMemory *shm)
 	if (!shm)
 		return;
 
-	free(shm->buffer);
+	/* Free only allocated buffer. Registered buffer is owned by the caller */
+	if (shm->internal.flags & SHM_FLAG_BUFFER_ALLOCED) {
+		free(shm->buffer);
+	}
+
 	shm->buffer = NULL;
 	shm->size = 0;
 	shm->alloced_size = 0;
+	shm->internal.flags = 0;
 }
