@@ -70,8 +70,8 @@ static TEEC_Result allocate_serialize_buf(TEEC_Operation *operation,
         case TEEC_MEMREF_PARTIAL_INPUT:
         case TEEC_MEMREF_PARTIAL_OUTPUT:
         case TEEC_MEMREF_PARTIAL_INOUT:
-            DBG_ABORT();
-            break;
+            EMSG("Not implemented: TEEC_MEMREF_PARTIAL");
+            return TEEC_ERROR_NOT_IMPLEMENTED;
         default:
             EMSG("Unknown parameter");
             return TEEC_ERROR_BAD_PARAMETERS;
@@ -223,8 +223,8 @@ TEEC_Result sel4_serialize_params(TEEC_Operation *operation,
         case TEEC_MEMREF_PARTIAL_INPUT:
         case TEEC_MEMREF_PARTIAL_OUTPUT:
         case TEEC_MEMREF_PARTIAL_INOUT:
-            DBG_ABORT();
-            break;
+            EMSG("Not implemented: TEEC_MEMREF_PARTIAL");
+            return TEEC_ERROR_NOT_IMPLEMENTED;
         default:
             EMSG("Unknown param type: %d", param_type);
             err = TEEC_ERROR_BAD_PARAMETERS;
@@ -423,8 +423,8 @@ TEEC_Result sel4_deserialize_params(TEEC_Operation *operation,
         case TEEC_MEMREF_PARTIAL_INPUT:
         case TEEC_MEMREF_PARTIAL_OUTPUT:
         case TEEC_MEMREF_PARTIAL_INOUT:
-            DBG_ABORT();
-            break;
+            EMSG("Not implemented: TEEC_MEMREF_PARTIAL");
+            return TEEC_ERROR_NOT_IMPLEMENTED;
         default:
             err = TEEC_ERROR_BAD_PARAMETERS;
             goto out;
