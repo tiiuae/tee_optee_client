@@ -147,15 +147,6 @@ void dump_buffer(const char *bname, const uint8_t *buffer, size_t blen);
 #define IMSG_FN_ENTRY()
 #endif
 
-static inline void dbg_abort_proc(const char *fn, uint32_t line)
-{
-	EMSG("ABORT: %s: %d", fn, line);
-	volatile int i = 1;
-	while(i) __atomic_thread_fence(__ATOMIC_RELAXED);
-}
-
-#define DBG_ABORT() dbg_abort_proc(__FUNCTION__, __LINE__)
-
 #ifdef __cplusplus
 }
 #endif
