@@ -194,13 +194,21 @@ TEEC_Result TEEC_InitializeContext(const char *name UNUSED, TEEC_Context *ctx)
 	if (!ctx)
 		return TEEC_ERROR_BAD_PARAMETERS;
 
-	ctx->fd = CTX_TA_FD;
+	ctx->fd = sel4_open_comm();
+
+	if (ctx->fd < 1) {
+		EMSG("error: open tty: %d", ctx->fd);
+		ctx->fd = -1;
+		return TEEC_ERROR_COMMUNICATION;
+	}
+
 
 	return TEEC_SUCCESS;
 }
 
 void TEEC_FinalizeContext(TEEC_Context *ctx)
 {
+	sel4_close_comm(ctx->fd);
 	ctx->fd = -1;
 }
 
@@ -729,7 +737,8 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 		goto out;
 	}
 
-	res = sel4_optee_open_session((char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
+	res = sel4_optee_open_session(ctx->fd, (char **)&param_in_out, &in_out_len,
+								&tee_err, &ta_err);
 	if (res) {
 		EMSG("error: sel4_optee_open_session: %d", res);
 		eorig = TEEC_ORIGIN_COMMS;
@@ -805,7 +814,8 @@ void TEEC_CloseSession(TEEC_Session *session UNUSED)
 		goto out;
 	}
 
-	res = sel4_optee_close_session((char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
+	res = sel4_optee_close_session(session->ctx->fd, (char **)&param_in_out,
+								&in_out_len, &tee_err, &ta_err);
 	if (res) {
 		EMSG("error: sel4_optee_close_session: %d", res);
 		goto out;
@@ -937,7 +947,8 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 		goto out;
 	}
 
-	res = sel4_optee_invoke_cmd(cmd_id, (char **)&param_in_out, &in_out_len, &tee_err, &ta_err);
+	res = sel4_optee_invoke_cmd(session->ctx->fd, cmd_id, (char **)&param_in_out,
+							&in_out_len, &tee_err, &ta_err);
 	if (res) {
 		EMSG("error: sel4_optee_invoke_cmd: %d", res);
 		eorig = TEEC_ORIGIN_COMMS;
